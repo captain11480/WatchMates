@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Room - WatchMates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Load Socket.IO client library -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="container">
+        <nav class="navbar">
+            <a href="index.html" class="logo">WatchMates</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#about">About</a>
+                <a href="index.html#features">Features</a>
+                <a href="joinroom.html">Join Room</a>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            <div class="mobile-menu">
+                <i class="fas fa-bars"></i>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Join Room Section -->
+    <div class="container">
+        <section class="join-container">
+            <div class="room-cards">
+                <!-- Create Room Card -->
+                <div class="room-card fade-in">
+                    <h2>Create Room</h2>
+                    <form id="createRoomForm">
+                        <div class="form-group">
+                            <label for="roomName">Room Name</label>
+                            <input type="text" id="roomName" class="form-control" placeholder="e.g., Friday Movie Night" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="createNickname">Your Nickname</label>
+                            <input type="text" id="createNickname" class="form-control" placeholder="Enter your nickname" required>
+                        </div>
+                        <div id="roomCodeDisplay" class="room-code-display" style="display: none;">
+                            <div class="success-message">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Room created successfully!</span>
+                            </div>
+                            <div class="code-container">
+                                <strong>Your room code:</strong>
+                                <div class="room-code" id="generatedRoomCode"></div>
+                            </div>
+                            <div class="redirect-message">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                Redirecting to watch room...
+                            </div>
+                        </div>
+                        <button type="submit" class="btn" id="createRoomBtn">Create Room</button>
+                    </form>
+                </div>
+
+                <!-- Join Room Card -->
+                <div class="room-card fade-in">
+                    <h2>Join Room</h2>
+                    <form id="joinRoomForm">
+                        <div class="form-group">
+                            <label for="roomCode">Room Code</label>
+                            <input type="text" id="roomCode" class="form-control" placeholder="Enter 6-character code" required maxlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="joinNickname">Your Nickname</label>
+                            <input type="text" id="joinNickname" class="form-control" placeholder="Enter your nickname" required>
+                        </div>
+                        <div id="joinAlert" class="alert alert-danger" style="display: none;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Room not found. Please check the code.
+                        </div>
+                        <button type="submit" class="btn">Join Room</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 WatchMates. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

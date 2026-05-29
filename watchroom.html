@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Room - WatchMates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Socket.IO Client Library -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="container">
+        <nav class="navbar">
+            <a href="index.html" class="logo">WatchMates</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#about">About</a>
+                <a href="index.html#features">Features</a>
+                <a href="joinroom.html">Join Room</a>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            <div class="mobile-menu">
+                <i class="fas fa-bars"></i>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Watch Room Section -->
+    <div class="container watch-container">
+        <div class="room-header">
+            <h1 id="roomTitle">🎬 <span id="roomNameDisplay">Loading Room...</span></h1>
+            <div class="room-info-badge">
+                <span class="room-code-badge">Code: <strong id="roomCodeDisplay">XXXXXX</strong></span>
+                <span class="users-online">
+                    <i class="fas fa-users"></i>
+                    <span id="userCount">1</span> online
+                </span>
+            </div>
+        </div>
+
+        <div class="watch-layout">
+            <!-- Video Player Section -->
+            <div class="video-container">
+                <div class="video-player">
+                    <video id="videoPlayer" controls>
+                        <source src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="video-controls">
+                    <div class="controls">
+                        <button class="control-btn" id="playBtn">
+                            <i class="fas fa-play"></i> Play
+                        </button>
+                        <button class="control-btn" id="pauseBtn">
+                            <i class="fas fa-pause"></i> Pause
+                        </button>
+                        <button class="control-btn" id="syncBtn">
+                            <i class="fas fa-sync"></i> Sync
+                        </button>
+                    </div>
+                    <div class="video-upload">
+                        <input type="file" id="videoUpload" accept="video/*" style="display: none;">
+                        <button class="control-btn secondary" id="uploadBtn">
+                            <i class="fas fa-upload"></i> Upload Video
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h3>Chat</h3>
+                    <div class="chat-actions">
+                        <span class="online-indicator">
+                            <i class="fas fa-circle"></i>
+                            <span id="currentUserNickname">You</span>
+                        </span>
+                        <button class="chat-toggle" id="chatToggle">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system-message">
+                        <div class="message-sender">System</div>
+                        <div class="message-content">Welcome to WatchMates! The room is loading...</div>
+                        <div class="message-time" id="currentTime"></div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <form class="chat-form" id="chatForm">
+                        <input type="text" class="chat-input-field" id="chatInput" placeholder="Type your message..." required>
+                        <button type="submit" class="chat-send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
