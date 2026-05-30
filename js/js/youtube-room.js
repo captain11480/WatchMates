@@ -62,15 +62,27 @@ socket.on('chatMessageReceived', (data) => {
 
 // YouTube Player API
 function onYouTubeIframeAPIReady() {
+    if (!videoId) {
+        console.error('No video ID found');
+        addChatMessage('System', 'Error: No video found. Please create a new room.', true);
+        return;
+    }
+    
     player = new YT.Player('youtubePlayer', {
-        height: '100%',
+        height: '500',
         width: '100%',
         videoId: videoId,
         events: {
             onReady: onPlayerReady,
-            onStateChange: onPlayerStateChange
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
         }
     });
+}
+
+function onPlayerError(event) {
+    console.error('YouTube error:', event.data);
+    addChatMessage('System', 'Error loading video. Please check the URL and try again.', true);
 }
 
 function onPlayerReady(event) {
