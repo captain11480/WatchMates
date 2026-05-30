@@ -1,6 +1,6 @@
-// Socket.IO and room logic for WatchMates
+// Socket.IO and room logic for VibeMates
 
-class WatchMatesClient {
+class VibeMatesClient {
     constructor() {
         this.socket = null;
         this.roomCode = null;
@@ -149,8 +149,8 @@ class WatchMatesClient {
         const roomCode = this.roomCode;
         if (!roomCode) return;
 
-        const roomName = this.roomName || 'WatchMates Room';
-        const shareText = `Join my WatchMates room "${roomName}"! Room Code: ${roomCode}\n\nWatch videos together in sync!`;
+        const roomName = this.roomName || 'VibeMates Room';
+        const shareText = `Join my VibeMates room "${roomName}"! Room Code: ${roomCode}\n\nWatch videos together in sync!`;
         const shareUrl = window.location.href.split('?')[0] + `?room=${roomCode}`;
 
         const shareOptions = document.createElement('div');
@@ -170,7 +170,7 @@ class WatchMatesClient {
                     <i class="fab fa-facebook-messenger"></i>
                     Messenger
                 </a>
-                <button class="share-btn copy" onclick="watchMatesClient.copyRoomCode('${roomCode}')">
+                <button class="share-btn copy" onclick="VibeMatesClient.copyRoomCode('${roomCode}')">
                     <i class="fas fa-copy"></i>
                     Copy Code
                 </button>
@@ -789,8 +789,8 @@ class WatchMatesClient {
 
 // Initialize the client when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("🚀 DOM loaded, initializing WatchMatesClient");
-    window.watchMatesClient = new WatchMatesClient();
+    console.log("🚀 DOM loaded, initializing VibeMatesClient");
+    window.VibeMatesClient = new VibeMatesClient();
     
     // Update current time in system message
     const currentTimeElement = document.getElementById('currentTime');

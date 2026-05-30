@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Room - WatchMates</title>
+    <title>Watch Room - VibeMates</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -14,7 +14,7 @@
     <!-- Navbar -->
     <div class="container">
         <nav class="navbar">
-            <a href="index.html" class="logo">WatchMates</a>
+            <a href="index.html" class="logo">VibeMates</a>
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="index.html#about">About</a>
@@ -60,9 +60,9 @@
                         <button class="control-btn" id="pauseBtn">
                             <i class="fas fa-pause"></i> Pause
                         </button>
-                        <button class="control-btn" id="syncBtn">
-                            <i class="fas fa-sync"></i> Sync
-                        </button>
+                       <button class="control-btn" id="syncBtn" onclick="syncVideo()">
+                          <i class="fas fa-sync"></i> Sync
+                     </button>
                     </div>
                     <div class="video-upload">
                         <input type="file" id="videoUpload" accept="video/*" style="display: none;">
@@ -90,7 +90,7 @@
                 <div class="chat-messages" id="chatMessages">
                     <div class="message system-message">
                         <div class="message-sender">System</div>
-                        <div class="message-content">Welcome to WatchMates! The room is loading...</div>
+                        <div class="message-content">Welcome to VibeMates! The room is loading...</div>
                         <div class="message-time" id="currentTime"></div>
                     </div>
                 </div>
@@ -108,5 +108,14 @@
 
     <script src="js/main.js"></script>
     <script src="js/script.js"></script>
+    <script>
+function syncVideo() {
+    const video = document.getElementById('videoPlayer');
+    if (video && window.watchMatesClient) {
+        window.watchMatesClient.sendSyncCommand();
+        alert('🎬 Video synced for everyone!');
+    }
+}
+</script>
 </body>
 </html>
