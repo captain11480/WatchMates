@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Room - VibeMates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="index.html" class="logo">VibeMates</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="joinroom.html">Join Room</a>
+                <a href="online.html">Online Movies</a>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            <div class="mobile-menu">
+                <i class="fas fa-bars"></i>
+            </div>
+        </nav>
+    </div>
+
+    <div class="container">
+        <section class="join-container">
+            <div class="room-cards">
+                <div class="room-card fade-in">
+                    <h2><i class="fab fa-youtube"></i> YouTube Movie Room</h2>
+                    <form id="createYoutubeRoomForm">
+                        <div class="form-group">
+                            <label for="roomName">Room Name</label>
+                            <input type="text" id="roomName" class="form-control" placeholder="Movie Night with Friends" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nickname">Your Nickname</label>
+                            <input type="text" id="nickname" class="form-control" placeholder="Enter your nickname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="youtubeUrl">YouTube URL</label>
+                            <input type="url" id="youtubeUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." required>
+                        </div>
+                        <button type="submit" class="btn">Create YouTube Room</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 VibeMates. Watch together, anywhere.</p>
+        </div>
+    </footer>
+<script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/online.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Room - VibeMates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <a href="index.html" class="logo">VibeMates</a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="joinroom.html">Join Room</a>
+                <a href="online.html">Online Movies</a>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            <div class="mobile-menu">
+                <i class="fas fa-bars"></i>
+            </div>
+        </nav>
+    </div>
+
+    <div class="container watch-container">
+        <div class="room-header">
+            <h1>🎬 <span id="roomNameDisplay">YouTube Room</span></h1>
+            <div class="room-info-badge">
+                <span class="room-code-badge">Code: <strong id="roomCodeDisplay">XXXXXX</strong></span>
+                <span class="users-online">
+                    <i class="fas fa-users"></i>
+                    <span id="userCount">1</span> online
+                </span>
+            </div>
+        </div>
+
+        <div class="watch-layout">
+            <div class="video-container">
+                <div class="video-player">
+                    <div id="youtubePlayer" style="width:100%; height:100%;"></div>
+                </div>
+                <div class="video-controls">
+                    <div class="controls">
+                        <button class="control-btn" id="playBtn">▶️ Play</button>
+                        <button class="control-btn" id="pauseBtn">⏸️ Pause</button>
+                        <button class="control-btn" id="syncBtn">🔄 Sync</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h3>💬 Chat</h3>
+                    <div class="chat-actions">
+                        <span class="online-indicator">
+                            <i class="fas fa-circle"></i>
+                            <span id="currentUserNickname">You</span>
+                        </span>
+                        <button class="chat-toggle" id="chatToggle">▼</button>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system-message">
+                        <div class="message-sender">System</div>
+                        <div class="message-content">Welcome to YouTube room!</div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <form class="chat-form" id="chatForm">
+                        <input type="text" class="chat-input-field" id="chatInput" placeholder="Type message..." required>
+                        <button type="submit" class="chat-send-btn">📤</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/youtube-room.js"></script>
+</body>
+</html>

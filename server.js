@@ -275,7 +275,85 @@ io.on('connection', (socket) => {
         }
     });
 });
+// ====================
+// YOUTUBE ROOM SUPPORT
+// ====================
 
+const youtubeRooms = new Map();
+
+socket.on('createYoutubeRoom', (data) => {
+    const { roomName, nickname, youtubeId } = data;
+    
+    if (!roomName || !nickname || !youtubeId) {
+        socket.emit('error', { message: 'All fields are required' });
+        return;
+    }
+    
+    const roomCode = generateRoomCode();
+    
+    const room = {
+        code: roomCode,
+        name: roomName.trim(),
+        youtubeId: youtubeId,
+        users: new Map(),
+        createdAt: new Date()
+    };
+    
+    room.users.set(socket.id, { nickname: nickname.trim(), socketId: socket.id });
+    youtubeRooms.set(roomCode, room);
+    socket.join(`youtube_${roomCode}`);
+    connectedUsers.set(socket.id, `youtube_${roomCode}`);
+    
+    socket.emit('youtubeRoomCreated', {
+        roomCode: roomCode,
+        youtubeId: youtubeId
+    });
+    
+    console.log(`🎬 YouTube room ${roomCode} created with video ${youtubeId}`);
+});
+
+socket.on('joinYoutubeRoom', (data) => {
+    const { roomCode, nickname } = data;
+    
+    const room = youtubeRooms.get(roomCode);
+    if (!room) {
+        socket.emit('roomNotFound', { message: 'Room not found' });
+        return;
+    }
+    
+    room.users.set(socket.id, { nickname: nickname.trim(), socketId: socket.id });
+    socket.join(`youtube_${roomCode}`);
+    connectedUsers.set(socket.id, `youtube_${roomCode}`);
+    
+    socket.emit('youtubeRoomJoined', {
+        roomCode: room.code,
+        roomName: room.name,
+        youtubeId: room.youtubeId,
+        nickname: nickname.trim()
+    });
+    
+    socket.to(`youtube_${roomCode}`).emit('userJoined', {
+        nickname: nickname.trim(),
+        userCount: room.users.size
+    });
+    
+    console.log(`👤 ${nickname} joined YouTube room ${roomCode}`);
+});
+
+socket.on('youtubePlay', (data) => {
+    const { roomCode } = data;
+    socket.to(`youtube_${roomCode}`).emit('youtubePlayed');
+});
+
+socket.on('youtubePause', (data) => {
+    const { roomCode } = data;
+    socket.to(`youtube_${roomCode}`).emit('youtubePaused');
+});
+
+socket.on('youtubeSync', (data) => {
+    const { roomCode, currentTime } = data;
+    socket.to(`youtube_${roomCode}`).emit('youtubeSynced', { currentTime });
+});
 // ====================
 // SERVER STARTUP
 // ====================
