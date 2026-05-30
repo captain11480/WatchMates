@@ -100,52 +100,75 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/main.js"></script>
+       <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
     <script>
         const socket = io();
         
-        document.getElementById('joinRoomForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
-            const nickname = document.getElementById('joinNickname').value.trim();
-            
-            if (!roomCode || !nickname) {
-                alert('Please fill all fields');
-                return;
-            }
-            
-            if (roomCode.length !== 6) {
-                alert('Room code must be 6 characters');
-                return;
-            }
-            
-            // Try to join YouTube room first
-            socket.emit('joinYoutubeRoom', { roomCode, nickname });
-            
-            // If YouTube room not found, try regular room
-            socket.once('roomNotFound', () => {
-                socket.emit('joinRoom', { roomCode, nickname });
+        // Create Room Form
+        const createForm = document.getElementById('createRoomForm');
+        if (createForm) {
+            createForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const roomName = document.getElementById('roomName').value.trim();
+                const nickname = document.getElementById('createNickname').value.trim();
+                
+                if (!roomName || !nickname) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                
+                socket.emit('createRoom', { roomName, nickname });
+                
+                socket.once('roomCreated', (data) => {
+                    window.location.href = `watchroom.html?room=${data.roomCode}&name=${encodeURIComponent(nickname)}`;
+                });
             });
-            
-            // Handle YouTube room join
-            socket.once('youtubeRoomJoined', (data) => {
-                window.location.href = `youtube-room.html?room=${data.roomCode}&name=${encodeURIComponent(nickname)}&video=${data.youtubeId}`;
+        }
+        
+        // Join Room Form
+        const joinForm = document.getElementById('joinRoomForm');
+        if (joinForm) {
+            joinForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
+                const nickname = document.getElementById('joinNickname').value.trim();
+                
+                if (!roomCode || !nickname) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                
+                if (roomCode.length !== 6) {
+                    alert('Room code must be 6 characters');
+                    return;
+                }
+                
+                // First try YouTube room
+                socket.emit('joinYoutubeRoom', { roomCode, nickname });
+                
+                socket.once('youtubeRoomJoined', (data) => {
+                    window.location.href = `youtube-room.html?room=${data.roomCode}&name=${encodeURIComponent(nickname)}&video=${data.youtubeId}`;
+                });
+                
+                // If not YouTube, try regular room
+                socket.once('roomNotFound', () => {
+                    socket.emit('joinRoom', { roomCode, nickname });
+                    
+                    socket.once('roomJoined', (data) => {
+                        window.location.href = `watchroom.html?room=${data.roomCode}&name=${encodeURIComponent(nickname)}`;
+                    });
+                    
+                    socket.once('roomNotFound', () => {
+                        const alertDiv = document.getElementById('joinAlert');
+                        alertDiv.style.display = 'flex';
+                        setTimeout(() => {
+                            alertDiv.style.display = 'none';
+                        }, 5000);
+                    });
+                });
             });
-            
-            // Handle regular room join
-            socket.once('roomJoined', (data) => {
-                window.location.href = `watchroom.html?room=${data.roomCode}&name=${encodeURIComponent(nickname)}`;
-            });
-            
-            // Handle not found for both
-            socket.once('joinFailed', () => {
-                const alertDiv = document.getElementById('joinAlert');
-                alertDiv.style.display = 'flex';
-                setTimeout(() => {
-                    alertDiv.style.display = 'none';
-                }, 5000);
-            });
-        });
+        }
     </script>
-</body>
-</html>
