@@ -12,8 +12,6 @@ const io = socketIo(server);
 // EXPRESS CONFIGURATION
 // ====================
 app.use(express.static(path.join(__dirname)));
-// Serve static files from current directory
-app.use(express.static(path.join(__dirname)));
 
 // Route handlers for HTML pages
 const serveHTML = (filename) => (req, res) => {
@@ -23,45 +21,33 @@ const serveHTML = (filename) => (req, res) => {
 app.get('/', serveHTML('index.html'));
 app.get('/joinroom.html', serveHTML('joinroom.html'));
 app.get('/watchroom.html', serveHTML('watchroom.html'));
+app.get('/online.html', serveHTML('online.html'));
+app.get('/youtube-room.html', serveHTML('youtube-room.html'));
 
 // ====================
 // DATA STORES
 // ====================
 
 const rooms = new Map();           // roomCode -> room object
+const youtubeRooms = new Map();    // YouTube rooms
 const connectedUsers = new Map();  // socket.id -> roomCode
 
 // ====================
 // UTILITY FUNCTIONS
 // ====================
 
-/**
- * Generate a unique 6-character room code
- * @returns {string} Room code in format: A1B2C3
- */
 function generateRoomCode() {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
-    
     for (let i = 0; i < 6; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        result += characters.charAt(randomIndex);
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
-    
-    // Ensure uniqueness
-    while (rooms.has(result)) {
+    while (rooms.has(result) || youtubeRooms.has(result)) {
         result = generateRoomCode();
     }
-    
     return result;
 }
 
-/**
- * Check if nickname is already taken in a room (case-insensitive)
- * @param {Map} users - Room users map
- * @param {string} nickname - Nickname to check
- * @returns {boolean} True if nickname exists
- */
 function isNicknameTaken(users, nickname) {
     const existingNicknames = Array.from(users.values())
         .map(user => user.nickname.toLowerCase());
@@ -76,105 +62,66 @@ io.on('connection', (socket) => {
     console.log(`✅ User connected: ${socket.id}`);
     
     // ====================
-    // ROOM CREATION
+    // REGULAR ROOM CREATION
     // ====================
     socket.on('createRoom', (data) => {
         const { roomName, nickname } = data;
         
-        // Validate input
         if (!roomName || !nickname) {
-            socket.emit('error', { 
-                message: 'Room name and nickname are required' 
-            });
+            socket.emit('error', { message: 'Room name and nickname are required' });
             return;
         }
         
-        // Generate unique room code
         const roomCode = generateRoomCode();
-        
-        // Create room object
         const room = {
             code: roomCode,
             name: roomName.trim(),
             users: new Map(),
             createdAt: new Date(),
             currentVideo: null,
-            playbackState: {
-                isPlaying: false,
-                currentTime: 0,
-                lastUpdate: null
-            }
+            playbackState: { isPlaying: false, currentTime: 0, lastUpdate: null }
         };
         
-        // Add creator as first user
-        room.users.set(socket.id, {
-            nickname: nickname.trim(),
-            joinedAt: new Date(),
-            socketId: socket.id
-        });
-        
-        // Store room and user connections
+        room.users.set(socket.id, { nickname: nickname.trim(), joinedAt: new Date(), socketId: socket.id });
         rooms.set(roomCode, room);
         socket.join(roomCode);
         connectedUsers.set(socket.id, roomCode);
         
         console.log(`🏠 Room ${roomCode} created by ${nickname}`);
-        
-        // Send success response
-        socket.emit('roomCreated', {
-            roomCode,
-            roomName: room.name,
-            nickname: nickname.trim()
-        });
+        socket.emit('roomCreated', { roomCode, roomName: room.name, nickname: nickname.trim() });
     });
     
     // ====================
-    // ROOM JOINING
+    // REGULAR ROOM JOINING
     // ====================
     socket.on('joinRoom', (data) => {
         const { roomCode, nickname } = data;
         
-        // Validate input
         if (!roomCode || !nickname) {
-            socket.emit('error', { 
-                message: 'Room code and nickname are required' 
-            });
+            socket.emit('error', { message: 'Room code and nickname are required' });
             return;
         }
         
         const formattedRoomCode = roomCode.toUpperCase();
         const room = rooms.get(formattedRoomCode);
         
-        // Check if room exists
         if (!room) {
-            socket.emit('roomNotFound', { 
-                message: 'Room not found. Please check the code.' 
-            });
+            socket.emit('roomNotFound', { message: 'Room not found. Please check the code.' });
             return;
         }
         
-        // Check for duplicate nickname
         if (isNicknameTaken(room.users, nickname)) {
-            socket.emit('error', { 
-                message: 'Nickname already taken in this room' 
-            });
+            socket.emit('error', { message: 'Nickname already taken in this room' });
             return;
         }
         
-        // Add user to room
-        const userData = {
-            nickname: nickname.trim(),
-            joinedAt: new Date(),
-            socketId: socket.id
-        };
-        
+        const userData = { nickname: nickname.trim(), joinedAt: new Date(), socketId: socket.id };
         room.users.set(socket.id, userData);
         socket.join(formattedRoomCode);
         connectedUsers.set(socket.id, formattedRoomCode);
         
         console.log(`👤 ${nickname} joined room ${formattedRoomCode} (${room.users.size} users)`);
         
-        // Notify joining user
         socket.emit('roomJoined', {
             roomCode: room.code,
             roomName: room.name,
@@ -183,7 +130,6 @@ io.on('connection', (socket) => {
             userCount: room.users.size
         });
         
-        // Notify other users in room
         socket.to(formattedRoomCode).emit('userJoined', {
             nickname: userData.nickname,
             userId: socket.id,
@@ -197,21 +143,21 @@ io.on('connection', (socket) => {
     // ====================
     socket.on('videoPlay', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        if (roomCode) {
+        if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoPlayed', data);
         }
     });
     
     socket.on('videoPause', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        if (roomCode) {
+        if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoPaused', data);
         }
     });
     
     socket.on('videoSync', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        if (roomCode) {
+        if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoSynced', data);
         }
     });
@@ -222,11 +168,7 @@ io.on('connection', (socket) => {
     socket.on('chatMessage', (data) => {
         const roomCode = connectedUsers.get(socket.id);
         if (roomCode) {
-            // Broadcast to everyone in room including sender
-            io.to(roomCode).emit('chatMessageReceived', {
-                ...data,
-                timestamp: Date.now()
-            });
+            io.to(roomCode).emit('chatMessageReceived', { ...data, timestamp: Date.now() });
         }
     });
     
@@ -238,50 +180,8 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // DISCONNECTION HANDLING
-    // ====================
-    socket.on('disconnect', () => {
-        console.log(`❌ User disconnected: ${socket.id}`);
-        
-        const roomCode = connectedUsers.get(socket.id);
-        if (!roomCode) return;
-        
-        const room = rooms.get(roomCode);
-        if (!room) return;
-        
-        const user = room.users.get(socket.id);
-        
-        // Remove user from room
-        room.users.delete(socket.id);
-        connectedUsers.delete(socket.id);
-        
-        // Notify other users
-        if (user) {
-            socket.to(roomCode).emit('userLeft', {
-                nickname: user.nickname,
-                userId: socket.id,
-                userCount: room.users.size
-            });
-        }
-        
-        // Clean up empty rooms after delay
-        if (room.users.size === 0) {
-            setTimeout(() => {
-                if (rooms.get(roomCode)?.users.size === 0) {
-                    rooms.delete(roomCode);
-                    console.log(`🗑️  Room ${roomCode} deleted (empty)`);
-                }
-            }, 30000); // 30 seconds delay
-        }
-    });
-});
-// ====================
-// YOUTUBE ROOM SUPPORT
-// ====================
-    // ====================
     // YOUTUBE ROOM SUPPORT
     // ====================
-    
     socket.on('createYoutubeRoom', (data) => {
         const { roomName, nickname, youtubeId } = data;
         
@@ -291,7 +191,6 @@ io.on('connection', (socket) => {
         }
         
         const roomCode = generateRoomCode();
-        
         const room = {
             code: roomCode,
             name: roomName.trim(),
@@ -301,28 +200,18 @@ io.on('connection', (socket) => {
         };
         
         room.users.set(socket.id, { nickname: nickname.trim(), socketId: socket.id });
-        
-        // Store in separate Map for YouTube rooms
-        if (!global.youtubeRooms) global.youtubeRooms = new Map();
-        global.youtubeRooms.set(roomCode, room);
-        
+        youtubeRooms.set(roomCode, room);
         socket.join(`youtube_${roomCode}`);
         connectedUsers.set(socket.id, `youtube_${roomCode}`);
         
-        socket.emit('youtubeRoomCreated', {
-            roomCode: roomCode,
-            youtubeId: youtubeId
-        });
-        
+        socket.emit('youtubeRoomCreated', { roomCode: roomCode, youtubeId: youtubeId });
         console.log(`🎬 YouTube room ${roomCode} created with video ${youtubeId}`);
     });
     
     socket.on('joinYoutubeRoom', (data) => {
         const { roomCode, nickname } = data;
         
-        if (!global.youtubeRooms) global.youtubeRooms = new Map();
-        const room = global.youtubeRooms.get(roomCode);
-        
+        const room = youtubeRooms.get(roomCode);
         if (!room) {
             socket.emit('roomNotFound', { message: 'Room not found' });
             return;
@@ -361,11 +250,59 @@ io.on('connection', (socket) => {
         const { roomCode, currentTime } = data;
         socket.to(`youtube_${roomCode}`).emit('youtubeSynced', { currentTime });
     });
+    
+    // ====================
+    // DISCONNECTION HANDLING
+    // ====================
+    socket.on('disconnect', () => {
+        console.log(`❌ User disconnected: ${socket.id}`);
+        
+        const roomId = connectedUsers.get(socket.id);
+        if (!roomId) return;
+        
+        // Check if it's a YouTube room
+        if (roomId.startsWith('youtube_')) {
+            const roomCode = roomId.replace('youtube_', '');
+            const room = youtubeRooms.get(roomCode);
+            if (room) {
+                const user = room.users.get(socket.id);
+                room.users.delete(socket.id);
+                if (user) {
+                    socket.to(roomId).emit('userLeft', { nickname: user.nickname, userCount: room.users.size });
+                }
+                if (room.users.size === 0) {
+                    setTimeout(() => {
+                        if (youtubeRooms.get(roomCode)?.users.size === 0) {
+                            youtubeRooms.delete(roomCode);
+                            console.log(`🗑️ YouTube room ${roomCode} deleted (empty)`);
+                        }
+                    }, 30000);
+                }
+            }
+        } else {
+            // Regular room
+            const room = rooms.get(roomId);
+            if (room) {
+                const user = room.users.get(socket.id);
+                room.users.delete(socket.id);
+                if (user) {
+                    socket.to(roomId).emit('userLeft', { nickname: user.nickname, userCount: room.users.size });
+                }
+                if (room.users.size === 0) {
+                    setTimeout(() => {
+                        if (rooms.get(roomId)?.users.size === 0) {
+                            rooms.delete(roomId);
+                            console.log(`🗑️ Room ${roomId} deleted (empty)`);
+                        }
+                    }, 30000);
+                }
+            }
+        }
+        
+        connectedUsers.delete(socket.id);
+    });
+});
 
-
-// ====================
-// SERVER STARTUP
-// ====================
 // ====================
 // SERVER STARTUP
 // ====================
@@ -377,16 +314,10 @@ server.listen(PORT, HOST, () => {
     console.log(`🚀 VibeMates server running on port ${PORT}`);
     console.log(`🔌 Socket.IO server ready for connections`);
     console.log(`🌐 Local: http://localhost:${PORT}`);
-    console.log(`📱 Network: http://${getLocalIP()}:${PORT}`);
 });
 
-/**
- * Get local IP address for network access
- * @returns {string} Local IP address
- */
 function getLocalIP() {
     const interfaces = require('os').networkInterfaces();
-    
     for (const interfaceName in interfaces) {
         for (const iface of interfaces[interfaceName]) {
             if (iface.family === 'IPv4' && !iface.internal) {
@@ -394,6 +325,5 @@ function getLocalIP() {
             }
         }
     }
-    
     return 'localhost';
 }
