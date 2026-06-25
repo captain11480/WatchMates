@@ -67,6 +67,8 @@ io.on('connection', (socket) => {
     socket.on('createRoom', (data) => {
         const { roomName, nickname } = data;
         
+        console.log(`📥 Create room request: ${nickname} -> ${roomName}`);
+        
         if (!roomName || !nickname) {
             socket.emit('error', { message: 'Room name and nickname are required' });
             return;
@@ -92,10 +94,12 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // REGULAR ROOM JOINING
+    // REGULAR ROOM JOINING - FIXED
     // ====================
     socket.on('joinRoom', (data) => {
         const { roomCode, nickname } = data;
+        
+        console.log(`📥 Join request: ${nickname} -> ${roomCode}`);
         
         if (!roomCode || !nickname) {
             socket.emit('error', { message: 'Room code and nickname are required' });
@@ -106,6 +110,7 @@ io.on('connection', (socket) => {
         const room = rooms.get(formattedRoomCode);
         
         if (!room) {
+            console.log(`❌ Room not found: ${formattedRoomCode}`);
             socket.emit('roomNotFound', { message: 'Room not found. Please check the code.' });
             return;
         }
@@ -115,34 +120,40 @@ io.on('connection', (socket) => {
             return;
         }
         
-        const userData = { nickname: nickname.trim(), joinedAt: new Date(), socketId: socket.id };
+        const userData = { 
+            nickname: nickname.trim(), 
+            joinedAt: new Date(), 
+            socketId: socket.id 
+        };
         room.users.set(socket.id, userData);
         socket.join(formattedRoomCode);
         connectedUsers.set(socket.id, formattedRoomCode);
         
         console.log(`👤 ${nickname} joined room ${formattedRoomCode} (${room.users.size} users)`);
         
+        // Send full room data to the joining user
         socket.emit('roomJoined', {
             roomCode: room.code,
             roomName: room.name,
             nickname: userData.nickname,
-            users: Array.from(room.users.values()),
+            users: Array.from(room.users.values()).map(u => u.nickname),
             userCount: room.users.size
         });
         
+        // Notify other users in room
         socket.to(formattedRoomCode).emit('userJoined', {
             nickname: userData.nickname,
             userId: socket.id,
-            users: Array.from(room.users.values()),
             userCount: room.users.size
         });
     });
     
     // ====================
-    // VIDEO CONTROL EVENTS
+    // VIDEO CONTROL EVENTS - FIXED
     // ====================
     socket.on('videoPlay', (data) => {
         const roomCode = connectedUsers.get(socket.id);
+        console.log(`▶️ Play event - Room: ${roomCode}`);
         if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoPlayed', data);
         }
@@ -150,6 +161,7 @@ io.on('connection', (socket) => {
     
     socket.on('videoPause', (data) => {
         const roomCode = connectedUsers.get(socket.id);
+        console.log(`⏸️ Pause event - Room: ${roomCode}`);
         if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoPaused', data);
         }
@@ -157,18 +169,23 @@ io.on('connection', (socket) => {
     
     socket.on('videoSync', (data) => {
         const roomCode = connectedUsers.get(socket.id);
+        console.log(`🔄 Sync event - Room: ${roomCode}, Time: ${data.currentTime}`);
         if (roomCode && rooms.has(roomCode)) {
             socket.to(roomCode).emit('videoSynced', data);
         }
     });
     
     // ====================
-    // CHAT & MEDIA EVENTS
+    // CHAT & MEDIA EVENTS - FIXED
     // ====================
     socket.on('chatMessage', (data) => {
         const roomCode = connectedUsers.get(socket.id);
+        console.log(`💬 Chat: ${data.nickname} in ${roomCode}: ${data.message}`);
         if (roomCode) {
-            io.to(roomCode).emit('chatMessageReceived', { ...data, timestamp: Date.now() });
+            io.to(roomCode).emit('chatMessageReceived', { 
+                ...data, 
+                timestamp: Date.now() 
+            });
         }
     });
     
@@ -184,6 +201,8 @@ io.on('connection', (socket) => {
     // ====================
     socket.on('createYoutubeRoom', (data) => {
         const { roomName, nickname, youtubeId } = data;
+        
+        console.log(`📥 Create YouTube room: ${nickname} -> ${roomName}`);
         
         if (!roomName || !nickname || !youtubeId) {
             socket.emit('error', { message: 'All fields are required' });
@@ -210,6 +229,8 @@ io.on('connection', (socket) => {
     
     socket.on('joinYoutubeRoom', (data) => {
         const { roomCode, nickname } = data;
+        
+        console.log(`📥 Join YouTube request: ${nickname} -> ${roomCode}`);
         
         const room = youtubeRooms.get(roomCode);
         if (!room) {
@@ -238,16 +259,19 @@ io.on('connection', (socket) => {
     
     socket.on('youtubePlay', (data) => {
         const { roomCode } = data;
+        console.log(`▶️ YouTube Play - Room: ${roomCode}`);
         socket.to(`youtube_${roomCode}`).emit('youtubePlayed');
     });
     
     socket.on('youtubePause', (data) => {
         const { roomCode } = data;
+        console.log(`⏸️ YouTube Pause - Room: ${roomCode}`);
         socket.to(`youtube_${roomCode}`).emit('youtubePaused');
     });
     
     socket.on('youtubeSync', (data) => {
         const { roomCode, currentTime } = data;
+        console.log(`🔄 YouTube Sync - Room: ${roomCode}, Time: ${currentTime}`);
         socket.to(`youtube_${roomCode}`).emit('youtubeSynced', { currentTime });
     });
     
@@ -268,7 +292,10 @@ io.on('connection', (socket) => {
                 const user = room.users.get(socket.id);
                 room.users.delete(socket.id);
                 if (user) {
-                    socket.to(roomId).emit('userLeft', { nickname: user.nickname, userCount: room.users.size });
+                    socket.to(roomId).emit('userLeft', { 
+                        nickname: user.nickname, 
+                        userCount: room.users.size 
+                    });
                 }
                 if (room.users.size === 0) {
                     setTimeout(() => {
@@ -286,7 +313,10 @@ io.on('connection', (socket) => {
                 const user = room.users.get(socket.id);
                 room.users.delete(socket.id);
                 if (user) {
-                    socket.to(roomId).emit('userLeft', { nickname: user.nickname, userCount: room.users.size });
+                    socket.to(roomId).emit('userLeft', { 
+                        nickname: user.nickname, 
+                        userCount: room.users.size 
+                    });
                 }
                 if (room.users.size === 0) {
                     setTimeout(() => {
@@ -325,5 +355,6 @@ function getLocalIP() {
             }
         }
     }
+    
     return 'localhost';
 }
