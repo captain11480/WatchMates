@@ -28,9 +28,9 @@ app.get('/youtube-room.html', serveHTML('youtube-room.html'));
 // DATA STORES
 // ====================
 
-const rooms = new Map();           // roomCode -> room object
-const youtubeRooms = new Map();    // YouTube rooms
-const connectedUsers = new Map();  // socket.id -> roomCode
+const rooms = new Map();
+const youtubeRooms = new Map();
+const connectedUsers = new Map();
 
 // ====================
 // UTILITY FUNCTIONS
@@ -41,9 +41,6 @@ function generateRoomCode() {
     let result = '';
     for (let i = 0; i < 6; i++) {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    while (rooms.has(result) || youtubeRooms.has(result)) {
-        result = generateRoomCode();
     }
     return result;
 }
@@ -62,39 +59,55 @@ io.on('connection', (socket) => {
     console.log(`✅ User connected: ${socket.id}`);
     
     // ====================
-    // REGULAR ROOM CREATION
+    // CREATE ROOM
     // ====================
     socket.on('createRoom', (data) => {
         const { roomName, nickname } = data;
         
-        console.log(`📥 Create room request: ${nickname} -> ${roomName}`);
+        console.log(`📥 Create room: ${nickname} -> ${roomName}`);
         
         if (!roomName || !nickname) {
             socket.emit('error', { message: 'Room name and nickname are required' });
             return;
         }
         
-        const roomCode = generateRoomCode();
+        let roomCode;
+        let attempts = 0;
+        do {
+            roomCode = generateRoomCode();
+            attempts++;
+        } while (rooms.has(roomCode) && attempts < 100);
+        
         const room = {
             code: roomCode,
             name: roomName.trim(),
             users: new Map(),
-            createdAt: new Date(),
-            currentVideo: null,
-            playbackState: { isPlaying: false, currentTime: 0, lastUpdate: null }
+            createdAt: Date.now(),
+            currentVideo: null
         };
         
-        room.users.set(socket.id, { nickname: nickname.trim(), joinedAt: new Date(), socketId: socket.id });
+        room.users.set(socket.id, { 
+            nickname: nickname.trim(), 
+            joinedAt: Date.now(), 
+            socketId: socket.id 
+        });
+        
         rooms.set(roomCode, room);
         socket.join(roomCode);
         connectedUsers.set(socket.id, roomCode);
         
         console.log(`🏠 Room ${roomCode} created by ${nickname}`);
-        socket.emit('roomCreated', { roomCode, roomName: room.name, nickname: nickname.trim() });
+        console.log(`📊 Active rooms: ${rooms.size}`);
+        
+        socket.emit('roomCreated', { 
+            roomCode, 
+            roomName: room.name, 
+            nickname: nickname.trim() 
+        });
     });
     
     // ====================
-    // REGULAR ROOM JOINING - FIXED
+    // JOIN ROOM - FIXED
     // ====================
     socket.on('joinRoom', (data) => {
         const { roomCode, nickname } = data;
@@ -109,6 +122,9 @@ io.on('connection', (socket) => {
         const formattedRoomCode = roomCode.toUpperCase();
         const room = rooms.get(formattedRoomCode);
         
+        console.log(`🔍 Looking for room: ${formattedRoomCode}, Found: ${!!room}`);
+        console.log(`📊 All rooms: ${Array.from(rooms.keys()).join(', ')}`);
+        
         if (!room) {
             console.log(`❌ Room not found: ${formattedRoomCode}`);
             socket.emit('roomNotFound', { message: 'Room not found. Please check the code.' });
@@ -122,25 +138,27 @@ io.on('connection', (socket) => {
         
         const userData = { 
             nickname: nickname.trim(), 
-            joinedAt: new Date(), 
+            joinedAt: Date.now(), 
             socketId: socket.id 
         };
+        
         room.users.set(socket.id, userData);
         socket.join(formattedRoomCode);
         connectedUsers.set(socket.id, formattedRoomCode);
         
         console.log(`👤 ${nickname} joined room ${formattedRoomCode} (${room.users.size} users)`);
         
-        // Send full room data to the joining user
+        // Send room data to joining user
+        const userList = Array.from(room.users.values()).map(u => u.nickname);
         socket.emit('roomJoined', {
             roomCode: room.code,
             roomName: room.name,
             nickname: userData.nickname,
-            users: Array.from(room.users.values()).map(u => u.nickname),
+            users: userList,
             userCount: room.users.size
         });
         
-        // Notify other users in room
+        // Notify others
         socket.to(formattedRoomCode).emit('userJoined', {
             nickname: userData.nickname,
             userId: socket.id,
@@ -149,39 +167,40 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // VIDEO CONTROL EVENTS - FIXED
+    // VIDEO CONTROLS - FIXED
     // ====================
     socket.on('videoPlay', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        console.log(`▶️ Play event - Room: ${roomCode}`);
         if (roomCode && rooms.has(roomCode)) {
+            console.log(`▶️ Play in ${roomCode}`);
             socket.to(roomCode).emit('videoPlayed', data);
         }
     });
     
     socket.on('videoPause', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        console.log(`⏸️ Pause event - Room: ${roomCode}`);
         if (roomCode && rooms.has(roomCode)) {
+            console.log(`⏸️ Pause in ${roomCode}`);
             socket.to(roomCode).emit('videoPaused', data);
         }
     });
     
     socket.on('videoSync', (data) => {
         const roomCode = connectedUsers.get(socket.id);
-        console.log(`🔄 Sync event - Room: ${roomCode}, Time: ${data.currentTime}`);
         if (roomCode && rooms.has(roomCode)) {
+            console.log(`🔄 Sync in ${roomCode} to ${data.currentTime}`);
             socket.to(roomCode).emit('videoSynced', data);
         }
     });
     
     // ====================
-    // CHAT & MEDIA EVENTS - FIXED
+    // CHAT - FIXED
     // ====================
     socket.on('chatMessage', (data) => {
         const roomCode = connectedUsers.get(socket.id);
         console.log(`💬 Chat: ${data.nickname} in ${roomCode}: ${data.message}`);
         if (roomCode) {
+            // Send to ALL users in room (including sender)
             io.to(roomCode).emit('chatMessageReceived', { 
                 ...data, 
                 timestamp: Date.now() 
@@ -189,33 +208,30 @@ io.on('connection', (socket) => {
         }
     });
     
-    socket.on('videoUploaded', (data) => {
-        const roomCode = connectedUsers.get(socket.id);
-        if (roomCode) {
-            socket.to(roomCode).emit('videoChanged', data);
-        }
-    });
-    
     // ====================
-    // YOUTUBE ROOM SUPPORT
+    // YOUTUBE ROOMS
     // ====================
     socket.on('createYoutubeRoom', (data) => {
         const { roomName, nickname, youtubeId } = data;
-        
-        console.log(`📥 Create YouTube room: ${nickname} -> ${roomName}`);
         
         if (!roomName || !nickname || !youtubeId) {
             socket.emit('error', { message: 'All fields are required' });
             return;
         }
         
-        const roomCode = generateRoomCode();
+        let roomCode;
+        let attempts = 0;
+        do {
+            roomCode = generateRoomCode();
+            attempts++;
+        } while (youtubeRooms.has(roomCode) && attempts < 100);
+        
         const room = {
             code: roomCode,
             name: roomName.trim(),
             youtubeId: youtubeId,
             users: new Map(),
-            createdAt: new Date()
+            createdAt: Date.now()
         };
         
         room.users.set(socket.id, { nickname: nickname.trim(), socketId: socket.id });
@@ -223,14 +239,12 @@ io.on('connection', (socket) => {
         socket.join(`youtube_${roomCode}`);
         connectedUsers.set(socket.id, `youtube_${roomCode}`);
         
-        socket.emit('youtubeRoomCreated', { roomCode: roomCode, youtubeId: youtubeId });
-        console.log(`🎬 YouTube room ${roomCode} created with video ${youtubeId}`);
+        socket.emit('youtubeRoomCreated', { roomCode, youtubeId });
+        console.log(`🎬 YouTube room ${roomCode} created`);
     });
     
     socket.on('joinYoutubeRoom', (data) => {
         const { roomCode, nickname } = data;
-        
-        console.log(`📥 Join YouTube request: ${nickname} -> ${roomCode}`);
         
         const room = youtubeRooms.get(roomCode);
         if (!room) {
@@ -259,24 +273,21 @@ io.on('connection', (socket) => {
     
     socket.on('youtubePlay', (data) => {
         const { roomCode } = data;
-        console.log(`▶️ YouTube Play - Room: ${roomCode}`);
         socket.to(`youtube_${roomCode}`).emit('youtubePlayed');
     });
     
     socket.on('youtubePause', (data) => {
         const { roomCode } = data;
-        console.log(`⏸️ YouTube Pause - Room: ${roomCode}`);
         socket.to(`youtube_${roomCode}`).emit('youtubePaused');
     });
     
     socket.on('youtubeSync', (data) => {
         const { roomCode, currentTime } = data;
-        console.log(`🔄 YouTube Sync - Room: ${roomCode}, Time: ${currentTime}`);
         socket.to(`youtube_${roomCode}`).emit('youtubeSynced', { currentTime });
     });
     
     // ====================
-    // DISCONNECTION HANDLING
+    // DISCONNECT
     // ====================
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
@@ -284,7 +295,7 @@ io.on('connection', (socket) => {
         const roomId = connectedUsers.get(socket.id);
         if (!roomId) return;
         
-        // Check if it's a YouTube room
+        // Handle YouTube room
         if (roomId.startsWith('youtube_')) {
             const roomCode = roomId.replace('youtube_', '');
             const room = youtubeRooms.get(roomCode);
@@ -301,13 +312,12 @@ io.on('connection', (socket) => {
                     setTimeout(() => {
                         if (youtubeRooms.get(roomCode)?.users.size === 0) {
                             youtubeRooms.delete(roomCode);
-                            console.log(`🗑️ YouTube room ${roomCode} deleted (empty)`);
                         }
                     }, 30000);
                 }
             }
         } else {
-            // Regular room
+            // Handle regular room
             const room = rooms.get(roomId);
             if (room) {
                 const user = room.users.get(socket.id);
@@ -334,7 +344,7 @@ io.on('connection', (socket) => {
 });
 
 // ====================
-// SERVER STARTUP
+// START SERVER
 // ====================
 
 const PORT = process.env.PORT || 3000;
@@ -345,16 +355,3 @@ server.listen(PORT, HOST, () => {
     console.log(`🔌 Socket.IO server ready for connections`);
     console.log(`🌐 Local: http://localhost:${PORT}`);
 });
-
-function getLocalIP() {
-    const interfaces = require('os').networkInterfaces();
-    for (const interfaceName in interfaces) {
-        for (const iface of interfaces[interfaceName]) {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                return iface.address;
-            }
-        }
-    }
-    
-    return 'localhost';
-}
