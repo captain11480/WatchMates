@@ -98,6 +98,7 @@ io.on('connection', (socket) => {
         
         console.log(`🏠 Room ${roomCode} created by ${nickname}`);
         console.log(`📊 Active rooms: ${rooms.size}`);
+        console.log(`📊 Room codes: ${Array.from(rooms.keys()).join(', ')}`);
         
         socket.emit('roomCreated', { 
             roomCode, 
@@ -107,7 +108,7 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // JOIN ROOM - FIXED
+    // JOIN ROOM
     // ====================
     socket.on('joinRoom', (data) => {
         const { roomCode, nickname } = data;
@@ -167,7 +168,7 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // VIDEO CONTROLS - FIXED
+    // VIDEO CONTROLS
     // ====================
     socket.on('videoPlay', (data) => {
         const roomCode = connectedUsers.get(socket.id);
@@ -194,13 +195,12 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // CHAT - FIXED
+    // CHAT
     // ====================
     socket.on('chatMessage', (data) => {
         const roomCode = connectedUsers.get(socket.id);
         console.log(`💬 Chat: ${data.nickname} in ${roomCode}: ${data.message}`);
         if (roomCode) {
-            // Send to ALL users in room (including sender)
             io.to(roomCode).emit('chatMessageReceived', { 
                 ...data, 
                 timestamp: Date.now() 
@@ -287,7 +287,7 @@ io.on('connection', (socket) => {
     });
     
     // ====================
-    // DISCONNECT
+    // DISCONNECT - ROOMS PERSIST
     // ====================
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
@@ -308,13 +308,8 @@ io.on('connection', (socket) => {
                         userCount: room.users.size 
                     });
                 }
-                if (room.users.size === 0) {
-                    setTimeout(() => {
-                        if (youtubeRooms.get(roomCode)?.users.size === 0) {
-                            youtubeRooms.delete(roomCode);
-                        }
-                    }, 30000);
-                }
+                // Don't delete room - keep it for others
+                console.log(`👤 ${user?.nickname} left YouTube room ${roomCode} (${room.users.size} users remain)`);
             }
         } else {
             // Handle regular room
@@ -328,13 +323,11 @@ io.on('connection', (socket) => {
                         userCount: room.users.size 
                     });
                 }
+                console.log(`👤 ${user?.nickname} left room ${roomId} (${room.users.size} users remain)`);
+                
+                // Room stays alive even when empty - users can join later
                 if (room.users.size === 0) {
-                    setTimeout(() => {
-                        if (rooms.get(roomId)?.users.size === 0) {
-                            rooms.delete(roomId);
-                            console.log(`🗑️ Room ${roomId} deleted (empty)`);
-                        }
-                    }, 30000);
+                    console.log(`📭 Room ${roomId} is empty but still available for new users`);
                 }
             }
         }
